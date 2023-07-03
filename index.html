@@ -118,6 +118,47 @@ h1 {
   -ms-text-security: disc;
   text-security: disc;
 }
+
+table {
+  border-collapse: collapse;
+  margin-bottom: 10px;
+  width: 100%;
+}
+
+th,
+td {
+  padding: 5px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid #666362;
+}
+
+th:first-child,
+td:first-child {
+  padding-left: 0;
+}
+
+th:last-child,
+td:last-child {
+  padding-right: 0;
+}
+
+.table-header {
+  font-weight: bold;
+  background-color: #555;
+  color: #f0f0f0;
+}
+
+.table-data {
+  background-color: #222;
+  color: #f0f0f0;
+}
+
+/* Hide empty table cells */
+th:empty,
+td:empty {
+  display: none;
+}
 </style>
 </head>
 <body>
@@ -129,6 +170,8 @@ h1 {
     <textarea id="message-input" placeholder="Type your message"></textarea>
     <button id="send-button">Send</button>
   </div>
+
+<script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_CHTML"></script>
 
 <script>
 const chatHistory = document.getElementById('chat-history');
@@ -184,6 +227,7 @@ async function createAndAppendMessage(content, owner) {
 
   chatHistory.appendChild(message);
   chatHistory.scrollTop = chatHistory.scrollHeight;
+  MathJax.Hub.Queue(['Typeset', MathJax.Hub, message]);
 }
 
 function parseResponse(response) {
@@ -192,10 +236,51 @@ function parseResponse(response) {
   // Parse bold text surrounded by double asterisks (**) and make it bold
   parsedResponse = parsedResponse.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
 
+  // Apply LaTeX formatting to text surrounded by "$$" or "$"
+  parsedResponse = parsedResponse.replace(/\$\$(.*?)\$\$/g, '<span class="mathjax-latex">\\($1\\)</span>');
+  parsedResponse = parsedResponse.replace(/\$(.*?)\$/g, '<span class="mathjax-latex">\\($1\\)</span>');
+
+  // Parse tables in Markdown syntax
+  parsedResponse = parseTables(parsedResponse);
+
   // Remove numbers in [^1^] format
   parsedResponse = parsedResponse.replace(/\[\^\d+\^\]/g, '');
 
   return parsedResponse;
+}
+
+function parseTables(response) {
+  const tableRegex = /\n((?:\s*\|.*\|\n)+)\n/g;
+  return response.replace(tableRegex, createTable);
+}
+
+function createTable(match, table) {
+  const rows = table.trim().split('\n');
+  const tableElement = document.createElement('table');
+
+  const tableHeader = document.createElement('tr');
+  const tableHeaderCells = rows[0].split('|').slice(1, -1);
+  tableHeaderCells.forEach((cell) => {
+    const th = document.createElement('th');
+    th.classList.add('table-header');
+    th.textContent = cell.trim();
+    tableHeader.appendChild(th);
+  });
+  tableElement.appendChild(tableHeader);
+
+  for (let i = 2; i < rows.length; i++) {
+    const row = document.createElement('tr');
+    const tableCells = rows[i].split('|').slice(1, -1);
+    tableCells.forEach((cell) => {
+      const td = document.createElement('td');
+      td.classList.add('table-data');
+      td.innerHTML = parseResponse(cell.trim());
+      row.appendChild(td);
+    });
+    tableElement.appendChild(row);
+  }
+
+  return tableElement.outerHTML;
 }
 
 async function sendMessage() {
@@ -262,5 +347,5 @@ document.getElementById('copy-button').addEventListener('click', () => {
 </script>
 
 </body>
-</html>
-      
+  </html>
+  
