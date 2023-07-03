@@ -3,6 +3,6 @@
 
 ## Mobile:
 
-![Chatbot UI](./ImPoudOfIt.jpg)
+![Chatbot UI](./ImPoudOfIt2.jpg)
 
 ### wht u lookin' at.
