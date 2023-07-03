@@ -130,6 +130,7 @@ h1 {
 const chatHistory = document.getElementById('chat-history');
 const apiKeyInput = document.getElementById('api-key-input');
 const messageInput = document.getElementById('message-input');
+let thinkingMessage; // Variable to store "Bing is thinking..." message
 
 // Retrieve API key from local storage if available
 const savedApiKey = localStorage.getItem('apiKey');
@@ -169,7 +170,12 @@ async function createAndAppendMessage(content, owner) {
   const message = document.createElement('div');
   message.classList.add('message', owner);
 
-  const parsedContent = parseResponse(content);
+  let displayedText = content;
+
+  // Exclude specific greetings from displayed text
+  displayedText = displayedText.replace(/(^|\W)(Hello\s*,?\s*this\s*is\s*Bing|Hi\s*,?\s*this\s*is\s*Bing)(\W|$)/gi, '');
+
+  const parsedContent = parseResponse(displayedText);
   message.innerHTML = parsedContent;
 
   chatHistory.appendChild(message);
@@ -205,13 +211,29 @@ async function sendMessage() {
   messageInput.value = '';
   messageInput.style.height = 'auto'; // Reset the height after clearing the value
 
+  // Remove "Bing is thinking..." message if it exists
+  if (thinkingMessage) {
+    thinkingMessage.remove();
+  }
+
   // Display "Bing is Thinking..." message
-  createAndAppendMessage('Bing is Thinking...', 'bot');
+  thinkingMessage = document.createElement('div');
+  thinkingMessage.classList.add('message', 'bot');
+  thinkingMessage.textContent = 'Bing is Thinking...';
+  chatHistory.appendChild(thinkingMessage);
+  chatHistory.scrollTop = chatHistory.scrollHeight;
 
   // Send message to Bing API
   const jsonResponse = await getBotResponse(apiKey, message);
 
   const botResponse = jsonResponse.text;
+
+  // Remove "Bing is thinking..." message
+  if (thinkingMessage) {
+    thinkingMessage.remove();
+    thinkingMessage = null;
+  }
+
   createAndAppendMessage(botResponse, 'bot');
 }
 
