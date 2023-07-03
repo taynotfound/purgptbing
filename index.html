@@ -10,10 +10,16 @@
 /* General page styling */
 body {
   font-family: Arial, sans-serif;
-  background-color: #f0f0f0;
+  background-color: #1f2229;
+  color: #f0f0f0;
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 20px;
 }
 
 /* Chat container styling */
@@ -25,9 +31,9 @@ body {
   min-width: 300px;
   margin: 50px auto;
   padding: 20px;
-  background-color: white;
+  background-color: #333;
   border-radius: 5px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
 }
 
 /* Chat history styling */
@@ -37,19 +43,23 @@ body {
   overflow-y: auto;
   height: 300px;
   padding: 10px;
-  border: 1px solid #ccc;
+  border: 1px solid #888;
   border-radius: 5px;
+  background-color: #222;
 }
 
 /* Input field styling */
 #api-key-input,
 #message-input {
   margin-top: 10px;
-  width: 100%;
+  width: 96.5%;
   padding: 5px;
-  border: 1px solid #ccc;
+  border: 1px solid #888;
   border-radius: 5px;
   outline: none;
+  background-color: #444;
+  color: #f0f0f0;
+  resize: none; /* Disable textarea resizing by the user */
 }
 
 /* Send button styling */
@@ -57,15 +67,11 @@ body {
   margin-top: 10px;
   padding: 5px 10px;
   background-color: #007bff;
-  color: white;
+  color: #f0f0f0;
   border: none;
   border-radius: 5px;
   cursor: pointer;
   transition: background-color 0.2s;
-}
-
-#send-button:hover {
-  background-color: #0056b3;
 }
 
 /* Message styling */
@@ -73,29 +79,50 @@ body {
   margin: 5px 0;
   max-width: 70%;
   word-wrap: break-word;
+  white-space: pre-wrap; /* Preserve line breaks */
 }
 
 .message.user {
   align-self: flex-end;
   background-color: #007bff;
-  color: white;
+  color: #f0f0f0;
   padding: 5px 10px;
   border-radius: 10px;
 }
 
 .message.bot {
   align-self: flex-start;
-  background-color: #eee;
+  background-color: #444;
   padding: 5px 10px;
   border-radius: 10px;
+}
+
+#copy-button {
+  margin-top: 10px;
+  padding: 5px 10px;
+  background-color: #007bff;
+  color: #f0f0f0;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+#api-key-input[type="password"] {
+  -webkit-text-security: disc;
+  -moz-text-security: disc;
+  -ms-text-security: disc;
+  text-security: disc;
 }
 </style>
 </head>
 <body>
   <div id="chat-container">
+    <h1>Bing With PurGPT</h1>
+    <button id="copy-button">Copy Latest Message</button>
     <div id="chat-history"></div>
-    <input id="api-key-input" type="text" placeholder="Enter your API key">
-    <input id="message-input" type="text" placeholder="Type your message">
+    <input id="api-key-input" type="password" placeholder="Click to enter your API key">
+    <textarea id="message-input" placeholder="Type your message"></textarea>
     <button id="send-button">Send</button>
   </div>
 
@@ -104,9 +131,33 @@ const chatHistory = document.getElementById('chat-history');
 const apiKeyInput = document.getElementById('api-key-input');
 const messageInput = document.getElementById('message-input');
 
+// Retrieve API key from local storage if available
+const savedApiKey = localStorage.getItem('apiKey');
+if (savedApiKey) {
+  apiKeyInput.value = savedApiKey;
+}
+
+messageInput.addEventListener('input', () => {
+  messageInput.style.height = 'auto';
+  messageInput.style.height = `${messageInput.scrollHeight}px`;
+});
+
 messageInput.addEventListener('keydown', (event) => {
-  if (event.key === 'Enter') sendMessage();
-}) 
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
+    messageInput.value += '\n';
+    messageInput.style.height = `${messageInput.scrollHeight}px`;
+  }
+});
+
+apiKeyInput.addEventListener('focus', () => {
+  apiKeyInput.setAttribute('type', 'text');
+});
+
+apiKeyInput.addEventListener('blur', () => {
+  apiKeyInput.setAttribute('type', 'password');
+});
+
 document.getElementById('send-button').addEventListener('click', sendMessage);
 
 async function getBotResponse(apiKey, message) {
@@ -114,11 +165,27 @@ async function getBotResponse(apiKey, message) {
   return response.json();
 }
 
-function createAndAppendMessage(content, owner) {
+async function createAndAppendMessage(content, owner) {
   const message = document.createElement('div');
   message.classList.add('message', owner);
-  message.textContent = content;
+
+  const parsedContent = parseResponse(content);
+  message.innerHTML = parsedContent;
+
   chatHistory.appendChild(message);
+  chatHistory.scrollTop = chatHistory.scrollHeight;
+}
+
+function parseResponse(response) {
+  let parsedResponse = response;
+
+  // Parse bold text surrounded by double asterisks (**) and make it bold
+  parsedResponse = parsedResponse.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+
+  // Remove numbers in [^1^] format
+  parsedResponse = parsedResponse.replace(/\[\^\d+\^\]/g, '');
+
+  return parsedResponse;
 }
 
 async function sendMessage() {
@@ -130,18 +197,44 @@ async function sendMessage() {
     return;
   }
 
+  // Save API key in local storage
+  localStorage.setItem('apiKey', apiKey);
+
   // Display user's message
   createAndAppendMessage(message, 'user');
   messageInput.value = '';
-  
+  messageInput.style.height = 'auto'; // Reset the height after clearing the value
+
+  // Display "Bing is Thinking..." message
+  createAndAppendMessage('Bing is Thinking...', 'bot');
+
   // Send message to Bing API
   const jsonResponse = await getBotResponse(apiKey, message);
 
   const botResponse = jsonResponse.text;
   createAndAppendMessage(botResponse, 'bot');
-  chatHistory.scrollTop = chatHistory.scrollHeight;
 }
+
+function copyToClipboard(text) {
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand('copy');
+  document.body.removeChild(textarea);
+}
+
+document.getElementById('copy-button').addEventListener('click', () => {
+  const latestResponse = chatHistory.lastElementChild.innerHTML;
+  if (latestResponse) {
+    copyToClipboard(latestResponse);
+    alert('Text copied to clipboard');
+  } else {
+    alert('No text to copy');
+  }
+});
 </script>
 
 </body>
-</html>
+  </html>
+  
