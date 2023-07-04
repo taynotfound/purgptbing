@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="A Chat Interface To Chat With BingAI Using PurGPT.">
+  <meta name="description" content="A Chat Interface To Chat With YouAI Using PurGPT.">
   <meta name="keywords" content="Chat, Bing AI, Interactive, Interface, AI">
-  <title>Chat with Bing AI - A Simple Interface</title>
+  <title>Chat with You AI - A Simple Interface</title>
   <style>
 /* General page styling */
 body {
@@ -163,7 +163,7 @@ td:empty {
 </head>
 <body>
   <div id="chat-container">
-    <h1>Bing With <a href="https://discord.gg/VyAf6CUwEr" style="color: #C074FF; text-decoration: none;">PurGPT</a></h1>
+    <h1>YouAI With <a href="https://discord.gg/VyAf6CUwEr" style="color: #C074FF; text-decoration: none;">PurGPT</a></h1>
     <button id="copy-button">Copy Latest Message</button>
     <div id="chat-history"></div>
     <input id="api-key-input" type="password" placeholder="Click to enter your API key">
@@ -209,14 +209,13 @@ apiKeyInput.addEventListener('blur', () => {
 document.getElementById('send-button').addEventListener('click', sendMessage);
 
 async function getBotResponse(apiKey, message) {
-  const response = await fetch(`https://purgpt.xyz/v1/bing?message=${encodeURIComponent(message)}&key=${encodeURIComponent(apiKey)}&variant=[Creative]`);
+  const response = await fetch(`https://purgpt.xyz/v1/you?prompt=${encodeURIComponent(message)}&key=${encodeURIComponent(apiKey)}`);
   return response.json();
 }
 
 async function createAndAppendMessage(content, owner) {
   const message = document.createElement('div');
   message.classList.add('message', owner);
-
   let displayedText = content;
 
   // Exclude specific greetings from displayed text
@@ -240,6 +239,8 @@ function parseResponse(response) {
   parsedResponse = parsedResponse.replace(/\$\$(.*?)\$\$/g, '<span class="mathjax-latex">\\($1\\)</span>');
   parsedResponse = parsedResponse.replace(/\$(.*?)\$/g, '<span class="mathjax-latex">\\($1\\)</span>');
 
+  //Replace masked links with working links
+  parsedResponse = parsedResponse.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank">$1</a>');
   // Parse tables in Markdown syntax
   parsedResponse = parseTables(parsedResponse);
 
@@ -308,14 +309,14 @@ async function sendMessage() {
   // Display "Bing is Thinking..." message
   thinkingMessage = document.createElement('div');
   thinkingMessage.classList.add('message', 'bot');
-  thinkingMessage.textContent = 'Bing is Thinking...';
+  thinkingMessage.textContent = 'You is Thinking...';
   chatHistory.appendChild(thinkingMessage);
   chatHistory.scrollTop = chatHistory.scrollHeight;
 
   // Send message to Bing API
   const jsonResponse = await getBotResponse(apiKey, message);
 
-  const botResponse = jsonResponse.text;
+  const botResponse = jsonResponse.choices[0].message.content;
 
   // Remove "Bing is thinking..." message
   if (thinkingMessage) {
